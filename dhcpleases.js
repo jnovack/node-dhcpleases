@@ -125,6 +125,7 @@ var updateFile = function() {
         //     _active[_leases[i].ip] = _leases[i];
         // }
     }
+    subnet.meta.used = _leases.length;
     if (process.env.NODE_ENV === 'development') {
         printTable();
     }
