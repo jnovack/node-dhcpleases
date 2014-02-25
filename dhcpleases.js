@@ -11,13 +11,13 @@ var app = express();
 # This lease file was written by isc-dhcp-4.1.1-P1
 
 lease 172.30.3.189 {
-starts 6 2012/12/01 15:07:57;
-ends 6 2012/12/01 15:08:50;
-tstp 6 2012/12/01 15:08:50;
-cltt 6 2012/12/01 15:07:57;
-binding state free;
-hardware ethernet 64:20:0c:69:75:60;
-uid "\001d \014iu`";
+  starts 6 2012/12/01 15:07:57;
+  ends 6 2012/12/01 15:08:50;
+  tstp 6 2012/12/01 15:08:50;
+  cltt 6 2012/12/01 15:07:57;
+  binding state free;
+  hardware ethernet 64:20:0c:69:75:60;
+  uid "\001d \014iu`";
 }
 */
 var leases = {};
