@@ -120,12 +120,16 @@ var updateFile = function() {
     });
 
     for (var i = 0; i < _leases.length; i++) {
-        subnet.leases.push(_leases[i]);
-        // if (_leases[i].state == 'active') {
-        //     _active[_leases[i].ip] = _leases[i];
-        // }
+        if (_leases[i].state == 'active') {
+            _active[_leases[i].ip] = _leases[i];
+        }
     }
-    subnet.meta.used = _leases.length;
+
+    for (var key in _active) {
+        subnet.leases.push(_active[key]);
+    }
+
+    subnet.meta.used = subnet.leases.length;
     if (process.env.NODE_ENV === 'development') {
         printTable();
     }
