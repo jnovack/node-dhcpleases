@@ -20,7 +20,26 @@ lease 172.30.3.189 {
   uid "\001d \014iu`";
 }
 */
+
 var leases = {};
+var subnet = {}
+var i;
+
+fs.readFileSync(file_config).toString().split(/\r?\n/).forEach(function(line){
+    if (line.match(/^#/)) return;
+    if (line.match(/^\s*subnet/)) {
+        i = line.match(/(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/g);
+        subnet = { meta: { subnet: i[0], network: i[1] }, leases: [] };
+    }
+    if (line.match(/^\s+range/)) {
+        range = line.match(/(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/g);
+        subnet.meta.start = range[0];
+        subnet.meta.finish = range[1];
+        range = explodeRange(range[0], range[1]);
+        subnet.meta.total = range.length;
+    }
+});
+
 
 function printTable() {
     var debug = require('debug')('dhcpleases');
@@ -36,13 +55,48 @@ function printTable() {
     console.log(table.toString());
 }
 
-function updateFile() {
+var explodeRange = function (start, finish) {
+    var ip1 = start.split(".");
+    var ip2 = finish.split(".");
+
+    var range = [];
+
+    var i = ip1;
+    while ((parseInt(i[3]) !== parseInt(ip2[3])) ||
+           (parseInt(i[2]) !== parseInt(ip2[2])) ||
+           (parseInt(i[1]) !== parseInt(ip2[1])) ||
+           (parseInt(i[0]) !== parseInt(ip2[0]))) {
+        range.push(i.join("."));
+        if (i[3] < 255) {
+            i[3]++;
+        } else if (i[3] === 255 && i[2] < 255) {
+            i[3] = 0;
+            i[2]++;
+        } else if (i[2] === 255 && i[1] < 255) {
+            i[3] = 0;
+            i[2] = 0;
+            i[1]++;
+        } else if (i[1] === 255 && i[0] < 255) {
+            i[3] = 0;
+            i[2] = 0;
+            i[1] = 0;
+            i[0]++;
+        } else {
+            throw new Error("Range error: IP out of range");
+        }
+    }
+    range.push(finish);
+    return range;
+};
+
+var updateFile = function() {
+    subnet.leases = [];
     debug("Updated at " + moment().format('MMMM Do YYYY, h:mm:ss a'));
     var i = 0;
     var _active = {},
     _leases = [];
 
-    fs.readFileSync(file).toString().split(/\r?\n/).forEach(function(line){
+    fs.readFileSync(file_leases).toString().split(/\r?\n/).forEach(function(line){
         if (line.match(/^lease/)) {
             var match = (/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/).exec(line);
             _leases[i] = new Object();
@@ -78,11 +132,12 @@ function updateFile() {
     });
 
     for (var i = 0; i < _leases.length; i++) {
-        if (_leases[i].state == 'active') {
-            _active[_leases[i].ip] = _leases[i];
-        }
+        subnet.leases.push(_leases[i]);
+        // if (_leases[i].state == 'active') {
+        //     _active[_leases[i].ip] = _leases[i];
+        // }
     }
-    leases = _active;
+
     if (process.env.NODE_ENV === 'development') {
         printTable();
     }
@@ -95,5 +150,5 @@ fs.watch(file_leases, function(event, filename) {
 app.listen(process.env.PORT || 3412);
 
 app.get('/', function(req, res) {
-    res.json(leases);
+    res.json(subnet);
 });
