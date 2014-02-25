@@ -1,8 +1,10 @@
 #!/usr/bin/node
 
 var fs = require('fs');
-var file_config = '/etc/dhcpd/dhcpd.conf';
+var file_config = '/etc/dhcp/dhcpd.conf';
 var file_leases = '/var/lib/dhcpd/dhcpd.leases';
+var moment = require('moment');
+var debug = require('debug')('dhcpleases');
 var express = require('express');
 var app = express();
 
@@ -25,26 +27,8 @@ var leases = {};
 var subnet = {}
 var i;
 
-fs.readFileSync(file_config).toString().split(/\r?\n/).forEach(function(line){
-    if (line.match(/^#/)) return;
-    if (line.match(/^\s*subnet/)) {
-        i = line.match(/(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/g);
-        subnet = { meta: { subnet: i[0], network: i[1] }, leases: [] };
-    }
-    if (line.match(/^\s+range/)) {
-        range = line.match(/(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/g);
-        subnet.meta.start = range[0];
-        subnet.meta.finish = range[1];
-        range = explodeRange(range[0], range[1]);
-        subnet.meta.total = range.length;
-    }
-});
-
 
 function printTable() {
-    var debug = require('debug')('dhcpleases');
-    var moment = require('moment');
-    debug("Updated at " + moment().format('MMMM Do YYYY, h:mm:ss a'));
     var cliTable = require('cli-table');
     var table = new cliTable({
         head: ['IP Address', 'State', 'Ethernet']
@@ -137,11 +121,27 @@ var updateFile = function() {
         //     _active[_leases[i].ip] = _leases[i];
         // }
     }
-
     if (process.env.NODE_ENV === 'development') {
         printTable();
     }
 }
+
+fs.readFileSync(file_config).toString().split(/\r?\n/).forEach(function(line){
+    if (line.match(/^#/)) return;
+    if (line.match(/^\s*subnet/)) {
+        i = line.match(/(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/g);
+        subnet = { meta: { subnet: i[0], network: i[1] }, leases: [] };
+    }
+    if (line.match(/^\s+range/)) {
+        range = line.match(/(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/g);
+        subnet.meta.start = range[0];
+        subnet.meta.finish = range[1];
+        range = explodeRange(range[0], range[1]);
+        subnet.meta.total = range.length;
+    }
+});
+
+updateFile();
 
 fs.watch(file_leases, function(event, filename) {
     updateFile();
