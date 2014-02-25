@@ -91,8 +91,12 @@ var updateFile = function() {
             _leases[i].starts = match[0];
         }
         if (line.match(/^  ends/)) {
-            var match = (/\d{4}\/\d{2}\/\d{2} \d{2}\:\d{2}\:\d{2}/).exec(line);
-            _leases[i].ends = match[0];
+            if (line.match(/never/)) {
+                _leases[i].ends = "never";
+            } else {
+                var match = (/\d{4}\/\d{2}\/\d{2} \d{2}\:\d{2}\:\d{2}/).exec(line);
+                _leases[i].ends = match[0];
+            }
         }
         if (line.match(/^  binding state/)) {
             var match = (/active|free/).exec(line);
