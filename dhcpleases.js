@@ -154,9 +154,12 @@ updateFile();
 
 fs.watch(file_leases, function(event, filename) {
     updateFile();
+    //io.sockets.emit('data', subnet.meta.used);
 });
 
-app.listen(process.env.PORT || 3412);
+var server = app.listen(process.env.PORT || 3412);
+
+//var io = require('socket.io').listen(server, { log: false });
 
 app.get('/', function(req, res) {
     res.json(subnet);
