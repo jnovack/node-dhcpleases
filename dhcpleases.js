@@ -88,11 +88,12 @@ function updateFile() {
     }
 }
 
-fs.watch(file, updateFile());
+fs.watch(file_leases, function(event, filename) {
+    updateFile();
+});
 
 app.listen(process.env.PORT || 3412);
 
 app.get('/', function(req, res) {
     res.json(leases);
 });
-
