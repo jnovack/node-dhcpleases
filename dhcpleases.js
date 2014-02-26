@@ -79,14 +79,14 @@ var updateFile = function() {
         }
         if (line.match(/^  starts/)) {
             var match = (/\d{4}\/\d{2}\/\d{2} \d{2}\:\d{2}\:\d{2}/).exec(line);
-            _leases[i].starts = match[0];
+            _leases[i].starts = moment(match[0] + " Z").format("X");
         }
         if (line.match(/^  ends/)) {
             if (line.match(/never/)) {
                 _leases[i].ends = "never";
             } else {
                 var match = (/\d{4}\/\d{2}\/\d{2} \d{2}\:\d{2}\:\d{2}/).exec(line);
-                _leases[i].ends = match[0];
+                _leases[i].ends = moment(match[0] + " Z").format("X");
             }
         }
         if (line.match(/^  binding state/)) {
