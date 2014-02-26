@@ -89,7 +89,7 @@ var updateFile = function() {
                 _leases[i].ends = moment(match[0] + " Z").format("X");
             }
         }
-        if (line.match(/^  binding state/)) {
+        if (line.match(/^  binding state [activefr]+/)) {
             var match = (/active|free/).exec(line);
             _leases[i].state = match[0];
         }
