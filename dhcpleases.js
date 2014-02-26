@@ -2,9 +2,10 @@
 
 var fs = require('fs');
 var file_config = '/etc/dhcp/dhcpd.conf';
-var file_leases = '/var/lib/dhcpd/dhcpd.leases';
+var file_leases = '/var/lib/dhcp/dhcpd.leases';
 var moment = require('moment');
 var debug = require('debug')('dhcpleases');
+var _ = require('underscore');
 var express = require('express');
 var app = express();
 
@@ -24,20 +25,9 @@ lease 172.30.3.189 {
 */
 
 var leases = {};
-var subnet = {}
+var subnet = {};
+var old = {};
 var i;
-
-
-function printTable() {
-    var cliTable = require('cli-table');
-    var table = new cliTable({
-        head: ['IP Address', 'State', 'Ethernet']
-    });
-    for (var lease in leases) {
-        table.push([leases[lease].ip, leases[lease].state, leases[lease].ethernet]);
-    }
-    console.log(table.toString());
-}
 
 var explodeRange = function (start, finish) {
     var ip1 = start.split(".");
@@ -74,11 +64,11 @@ var explodeRange = function (start, finish) {
 };
 
 var updateFile = function() {
-    subnet.leases = [];
+    old = subnet;
     debug("Updated at " + moment().format('MMMM Do YYYY, h:mm:ss a'));
     var i = 0;
     var _active = {},
-    _leases = [];
+        _leases = [];
 
     fs.readFileSync(file_leases).toString().split(/\r?\n/).forEach(function(line){
         if (line.match(/^lease/)) {
@@ -104,11 +94,11 @@ var updateFile = function() {
         }
         if (line.match(/^  uid/)) {
             var match = (/".*"/).exec(line);
-            _leases[i].uid = match[0];
+            _leases[i].uid = match[0].replace(/"/g, '');
         }
         if (line.match(/^  client-hostname/)) {
             var match = (/".*"/).exec(line);
-            _leases[i].hostname = match[0];
+            _leases[i].hostname = match[0].replace(/"/g, '');
         }
         if (line.match(/^  hardware ethernet/)) {
             var match = (/[a-f0-9\:]{17}/).exec(line);
@@ -125,21 +115,45 @@ var updateFile = function() {
         }
     }
 
+    subnet.leases = [];
     for (var key in _active) {
         subnet.leases.push(_active[key]);
     }
-
     subnet.meta.used = subnet.leases.length;
-    if (process.env.NODE_ENV === 'development') {
-        printTable();
+
+    io.sockets.emit("update", subnet.meta);
+
+    /* BUG - At this point, old.leases == subnet.leases, not sure why :( */
+
+    if (old.leases !== undefined) {
+        io.sockets.emit("changed", difference(old.leases,subnet.leases));
     }
-}
+};
+
+var difference = function(original, updated) {
+    for (var i = original.length - 1; i >= 0; i--) {
+        var delFromOriginal = null;
+        for (var j = updated.length - 1; j >= 0; j--) {
+            var delFromUpdated = null;
+            if (original[i] === updated[j]) {
+                delFromOriginal = i;
+                delFromUpdated = j;
+                console.log("original[" + i + "] equals updated[" + j + "]")
+                // console.log(JSON.stringify(original[i]));
+                // console.log(JSON.stringify(updated[j]));
+            }
+            if (delFromUpdated !== null) updated.splice(delFromUpdated,1);
+        }
+        if (delFromOriginal !== null) original.splice(delFromOriginal,1);
+    };
+    return original;
+};
 
 fs.readFileSync(file_config).toString().split(/\r?\n/).forEach(function(line){
     if (line.match(/^#/)) return;
     if (line.match(/^\s*subnet/)) {
         i = line.match(/(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/g);
-        subnet = { meta: { subnet: i[0], network: i[1] }, leases: [] };
+        subnet = { meta: { subnet: i[0], netmask: i[1] }, leases: [] };
     }
     if (line.match(/^\s+range/)) {
         range = line.match(/(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/g);
@@ -150,17 +164,20 @@ fs.readFileSync(file_config).toString().split(/\r?\n/).forEach(function(line){
     }
 });
 
+var server = app.listen(process.env.PORT || 3412);
+
+var io = require('socket.io').listen(server, { log: false });
+
 updateFile();
 
 fs.watch(file_leases, function(event, filename) {
     updateFile();
-    //io.sockets.emit('data', subnet.meta.used);
 });
-
-var server = app.listen(process.env.PORT || 3412);
-
-//var io = require('socket.io').listen(server, { log: false });
 
 app.get('/', function(req, res) {
     res.json(subnet);
+});
+
+io.on('connection', function(socket){
+    socket.emit("init", subnet);
 });

@@ -6,7 +6,8 @@
   "dependencies": {
     "express": "~3.3.7",
     "moment": "~2.1.0",
-    "socket.io": "~0.9.16"
+    "socket.io": "~0.9.16",
+    "underscore": "~1.6.0"
   },
   "devDependencies": {
     "cli-table": "~0.2.0",
