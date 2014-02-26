@@ -64,7 +64,8 @@ var explodeRange = function (start, finish) {
 };
 
 var updateFile = function() {
-    old = subnet;
+    old.leases = subnet.leases.slice(0); // clone the array
+    subnet.leases = [];
     debug("Updated at " + moment().format('MMMM Do YYYY, h:mm:ss a'));
     var i = 0;
     var _active = {},
@@ -115,7 +116,7 @@ var updateFile = function() {
         }
     }
 
-    subnet.leases = [];
+    // Only count 'active' leases.
     for (var key in _active) {
         subnet.leases.push(_active[key]);
     }
@@ -123,10 +124,9 @@ var updateFile = function() {
 
     io.sockets.emit("update", subnet.meta);
 
-    /* BUG - At this point, old.leases == subnet.leases, not sure why :( */
-
     if (old.leases !== undefined) {
-        io.sockets.emit("changed", difference(old.leases,subnet.leases));
+        // Use .slice(0) to send a COPY of the array, not the reference to the actuall array
+        io.sockets.emit("changed", difference(old.leases.slice(0),subnet.leases.slice(0)));
     }
 };
 
@@ -135,18 +135,20 @@ var difference = function(original, updated) {
         var delFromOriginal = null;
         for (var j = updated.length - 1; j >= 0; j--) {
             var delFromUpdated = null;
-            if (original[i] === updated[j]) {
+            if (JSON.stringify(original[i]) == JSON.stringify(updated[j])) {
+                // JSON.stringify() is not the best, if the lease is out of order
+                // (shouldn't be), the JSON will not be equal.
+                // In JSON, { a: 1, b:2 } DOES NOT EQUAL { b: 2, a: 1}
                 delFromOriginal = i;
                 delFromUpdated = j;
-                // console.log("original[" + i + "] equals updated[" + j + "]")
-                // console.log(JSON.stringify(original[i]));
-                // console.log(JSON.stringify(updated[j]));
             }
             if (delFromUpdated !== null) updated.splice(delFromUpdated,1);
         }
+        // We delete from both arrays to make the loop exponentially faster.
         if (delFromOriginal !== null) original.splice(delFromOriginal,1);
     };
-    return original;
+    // Return only the updated array's information.
+    return updated;
 };
 
 fs.readFileSync(file_config).toString().split(/\r?\n/).forEach(function(line){
