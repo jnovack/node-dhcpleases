@@ -138,7 +138,7 @@ var difference = function(original, updated) {
             if (original[i] === updated[j]) {
                 delFromOriginal = i;
                 delFromUpdated = j;
-                console.log("original[" + i + "] equals updated[" + j + "]")
+                // console.log("original[" + i + "] equals updated[" + j + "]")
                 // console.log(JSON.stringify(original[i]));
                 // console.log(JSON.stringify(updated[j]));
             }
