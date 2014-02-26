@@ -1,8 +1,8 @@
 #!/usr/bin/node
 
 var fs = require('fs');
-var file_config = '/etc/dhcp/dhcpd.conf';
-var file_leases = '/var/lib/dhcp/dhcpd.leases';
+var file_config = process.env.CONFIG || '/etc/dhcp/dhcpd.conf';
+var file_leases = process.env.LEASES || '/var/lib/dhcp/dhcpd.leases';
 var moment = require('moment');
 var debug = require('debug')('dhcpleases');
 var _ = require('underscore');
