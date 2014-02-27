@@ -83,7 +83,7 @@ var updateFile = function() {
         }
         if (line.match(/^  ends/)) {
             if (line.match(/never/)) {
-                _leases[i].ends = "never";
+                _leases[i].ends = 2147483647;
             } else {
                 var match = (/\d{4}\/\d{2}\/\d{2} \d{2}\:\d{2}\:\d{2}/).exec(line);
                 _leases[i].ends = parseInt(moment(match[0] + " Z").format("X"));
