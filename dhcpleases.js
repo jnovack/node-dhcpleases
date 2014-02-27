@@ -121,6 +121,7 @@ var updateFile = function() {
         subnet.leases.push(_active[key]);
     }
     subnet.meta.used = subnet.leases.length;
+    subnet.meta.updated = moment().unix();
 
     io.sockets.emit("update", subnet.meta);
 
