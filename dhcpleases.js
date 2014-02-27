@@ -182,5 +182,8 @@ app.get('/', function(req, res) {
 });
 
 io.on('connection', function(socket){
+    socket.on('ping', function(data) {
+        socket.emit('pong', subnet.meta);
+    });
     socket.emit("init", subnet);
 });
