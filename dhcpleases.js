@@ -7,6 +7,7 @@ var moment = require('moment');
 var debug = require('debug')('dhcpleases');
 var _ = require('underscore');
 var express = require('express');
+var Notify = require('fs.notify');
 var app = express();
 
 /*
@@ -173,7 +174,9 @@ var io = require('socket.io').listen(server, { log: false });
 
 updateFile();
 
-fs.watch(file_leases, function(event, filename) {
+var files = [file_leases];
+var notifications = new Notify(files);
+notifications.on('change', function (file, event, path) {
     updateFile();
 });
 
