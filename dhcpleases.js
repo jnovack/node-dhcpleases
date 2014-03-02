@@ -90,9 +90,13 @@ var updateFile = function() {
                 _leases[i].ends = parseInt(moment(match[0] + " Z").format("X"));
             }
         }
-        if (line.match(/^  binding state [activefr]+/)) {
-            var match = (/active|free/).exec(line);
-            _leases[i].state = match[0];
+        if (line.match(/^  binding state active/)) {
+            try {
+                var match = (/active/).exec(line);
+                _leases[i].state = match[0];
+            } catch (e) {
+                console.error("ERROR: /binding state active/" + line);
+            }
         }
         if (line.match(/^  uid/)) {
             var match = (/".*"/).exec(line);
